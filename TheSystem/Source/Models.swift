@@ -109,7 +109,34 @@ enum Rank: String, Codable, CaseIterable {
 
 // MARK: - Quest
 
+/// A real-activity metric a quest can be auto-cleared from, via HealthKit.
+enum HealthMetric: String, Codable, CaseIterable, Identifiable {
+    case steps
+    case distanceKm
+    case activeEnergy
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .steps:        return "Steps"
+        case .distanceKm:   return "Distance (km)"
+        case .activeEnergy: return "Active Energy (kcal)"
+        }
+    }
+
+    var unitSuffix: String {
+        switch self {
+        case .steps:        return "steps"
+        case .distanceKm:   return "km"
+        case .activeEnergy: return "kcal"
+        }
+    }
+}
+
 /// A task the hunter must clear. Boss quests grant a shadow on completion.
+/// A quest may also be linked to a `HealthMetric` so the System auto-clears
+/// it once your real activity reaches `healthTarget`.
 struct Quest: Identifiable, Codable, Hashable {
     var id: UUID = UUID()
     var title: String
@@ -119,6 +146,8 @@ struct Quest: Identifiable, Codable, Hashable {
     var statRewardAmount: Int = 1
     var isComplete: Bool = false
     var isBoss: Bool = false
+    var healthMetric: HealthMetric? = nil   // optional → backward-compatible saves
+    var healthTarget: Double? = nil
 
     /// The mandatory daily quest set Jinwoo receives from the System.
     static var defaultDailies: [Quest] {
@@ -126,7 +155,10 @@ struct Quest: Identifiable, Codable, Hashable {
             Quest(title: "100 Push-ups",  detail: "Daily training", xpReward: 30, statReward: .strength),
             Quest(title: "100 Sit-ups",   detail: "Daily training", xpReward: 30, statReward: .vitality),
             Quest(title: "100 Squats",    detail: "Daily training", xpReward: 30, statReward: .strength),
-            Quest(title: "10 km Run",     detail: "Daily training", xpReward: 50, statReward: .agility),
+            Quest(title: "10 km Run",     detail: "Daily training", xpReward: 50, statReward: .agility,
+                  healthMetric: .distanceKm, healthTarget: 10),
+            Quest(title: "10,000 Steps",  detail: "Stay on the move", xpReward: 40, statReward: .agility,
+                  healthMetric: .steps, healthTarget: 10_000),
             Quest(title: "Read / Study 30 min", detail: "Sharpen the mind", xpReward: 40, statReward: .intelligence)
         ]
     }

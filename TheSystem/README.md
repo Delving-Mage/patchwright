@@ -22,6 +22,8 @@ code is ready for you to drop into an Xcode project and run.
 | 📈 **Leveling + Stats** | Earn EXP, level up, spend points on STR / AGI / VIT / INT / PER |
 | 🎖️ **Ranks + Jobs** | Auto rank by level; unlock Fighter → … → **Shadow Monarch** |
 | 👤 **Shadow Army** | Clear a **Boss Quest** to "Arise" a shadow soldier (collectible rewards) |
+| 🔔 **System Alerts** | Optional daily reminder notification + an instant Penalty alert |
+| ❤️ **Health Sync** | Auto-clears the Run / Steps quests from real HealthKit activity |
 | 💾 **Saves locally** | Everything persists on the watch via `UserDefaults` |
 
 All progress resets/grades automatically at the start of each new day.
@@ -51,7 +53,23 @@ personal use).
 
 > The files: `TheSystemApp.swift`, `Models.swift`, `SystemStore.swift`,
 > `Theme.swift`, `StatusView.swift`, `QuestsView.swift`, `StatsView.swift`,
-> `ShadowsView.swift`, `Notifications.swift`.
+> `ShadowsView.swift`, `SettingsView.swift`, `Notifications.swift`,
+> `HealthManager.swift`, `NotificationManager.swift`.
+
+### 2b. Enable Health & Notifications (one-time capability setup)
+The Health Sync and reminder features need two permissions wired up in Xcode:
+
+1. Select the project → the **Watch App target** → **Signing & Capabilities**
+   → **+ Capability** → add **HealthKit**.
+2. Still on the target → **Info** tab → add this key:
+   - **Privacy - Health Share Usage Description**
+     (`NSHealthShareUsageDescription`) →
+     *"The System reads your activity to auto-clear movement quests."*
+3. Notifications need no capability — the app requests permission the first
+   time you enable the reminder in **Settings**.
+
+> Skipping this step is fine — the app still runs; only the Health Sync button
+> and reminders will be inactive.
 
 ### 3. Run in the simulator (instant)
 1. In the toolbar, pick a **Watch simulator** (e.g. *Apple Watch Series 10*).
@@ -97,9 +115,10 @@ All the rules live in `SystemStore.swift`:
 ---
 
 ## 🚀 Ideas for v2
-- Local notifications: a System "ping" if quests aren't cleared by evening.
-- HealthKit: auto-complete the run/workout quests from real activity.
 - iCloud sync + an iPhone companion app with a bigger status window.
-- Haptics + a sound on Level Up / Penalty for full drama.
+- Haptics on Level Up / Penalty for full drama.
+- A weekly auto-generated **Boss Quest** for guaranteed shadow drops.
+
+*(Done: ✅ local reminder notifications, ✅ HealthKit auto-clear.)*
 
 Happy leveling, Hunter. 🗡️

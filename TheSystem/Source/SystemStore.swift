@@ -105,6 +105,25 @@ final class SystemStore: ObservableObject {
         save()
     }
 
+    /// Pull today's activity from HealthKit and auto-clear any movement quest
+    /// whose target has been met. Returns a short summary for the UI.
+    @discardableResult
+    func syncHealth(using health: HealthManager) async -> String {
+        var clearedCount = 0
+        for quest in quests where !quest.isComplete {
+            guard let metric = quest.healthMetric, let target = quest.healthTarget else { continue }
+            let value = await health.value(for: metric)
+            if value >= target {
+                completeQuest(quest)
+                clearedCount += 1
+            }
+        }
+        let summary = clearedCount == 0 ? "No quests met their target yet."
+                                        : "Auto-cleared \(clearedCount) quest\(clearedCount == 1 ? "" : "s")."
+        health.lastSyncSummary = summary
+        return summary
+    }
+
     func addQuest(title: String, xp: Int, stat: Stat, isBoss: Bool) {
         let q = Quest(title: title, xpReward: xp, statReward: stat,
                       statRewardAmount: isBoss ? 3 : 1, isBoss: isBoss)
@@ -177,6 +196,8 @@ final class SystemStore: ObservableObject {
         penaltyActive = true
         player.fatigue = min(100, player.fatigue + 30)
         player.xp = max(0, player.xp - xpToNext / 4)
+        NotificationManager.notify(title: "⚠️ PENALTY ZONE",
+                                   body: "You failed the Daily Quest. The penalty has been applied.")
     }
 
     func endurePenalty() {

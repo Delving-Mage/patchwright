@@ -9,9 +9,12 @@ import SwiftUI
 
 struct QuestsView: View {
     @EnvironmentObject var store: SystemStore
+    @EnvironmentObject var health: HealthManager
     @State private var showingAdd = false
+    @State private var syncing = false
 
     private var cleared: Int { store.quests.filter { $0.isComplete }.count }
+    private var hasHealthQuests: Bool { store.quests.contains { $0.healthMetric != nil && !$0.isComplete } }
 
     var body: some View {
         ScrollView {
@@ -35,6 +38,30 @@ struct QuestsView: View {
 
                 ForEach(store.quests) { quest in
                     QuestRow(quest: quest)
+                }
+
+                if hasHealthQuests && HealthManager.isAvailable {
+                    Button {
+                        syncing = true
+                        Task {
+                            if !health.authorized { await health.requestAuthorization() }
+                            await store.syncHealth(using: health)
+                            syncing = false
+                        }
+                    } label: {
+                        Label(syncing ? "Syncing…" : "Sync Health", systemImage: "heart.text.square.fill")
+                            .font(.system(.caption, design: .monospaced))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(SystemTheme.danger)
+                    .disabled(syncing)
+
+                    if !health.lastSyncSummary.isEmpty {
+                        Text(health.lastSyncSummary)
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
                 }
 
                 Button {

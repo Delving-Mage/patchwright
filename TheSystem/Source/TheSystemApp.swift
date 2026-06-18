@@ -10,12 +10,14 @@ import SwiftUI
 @main
 struct TheSystemApp: App {
     @StateObject private var store = SystemStore()
+    @StateObject private var health = HealthManager()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(store)
+                .environmentObject(health)
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active { store.checkDailyReset() }
                 }
@@ -25,6 +27,7 @@ struct TheSystemApp: App {
 
 struct RootView: View {
     @EnvironmentObject var store: SystemStore
+    @EnvironmentObject var health: HealthManager
 
     var body: some View {
         TabView {
@@ -32,6 +35,7 @@ struct RootView: View {
             QuestsView()
             StatsView()
             ShadowsView()
+            SettingsView()
         }
         .tabViewStyle(.verticalPage)
         .background(SystemTheme.bg)
@@ -47,5 +51,7 @@ struct RootView: View {
 }
 
 #Preview {
-    RootView().environmentObject(SystemStore())
+    RootView()
+        .environmentObject(SystemStore())
+        .environmentObject(HealthManager())
 }
