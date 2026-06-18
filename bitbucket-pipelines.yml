@@ -1,0 +1,46 @@
+image: python:3.12-slim
+
+definitions:
+  steps:
+    - step: &patchwright
+        name: Patchwright — scan, validated auto-fix, open PR
+        services:
+          - docker
+        script:
+          # --- install the scanner backends (more scanners = more coverage + cross-confirm) ---
+          - apt-get update -qq && apt-get install -y -qq curl git
+          - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          - curl -sfL https://raw.githubusercontent.com/google/osv-scanner/main/scripts/install.sh | sh -s -- -b /usr/local/bin || true
+          - pip install -q semgrep checkov bandit
+          - curl -sfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/scripts/install.sh | sh || true
+
+          # --- install patchwright ---
+          - pip install -q -e .
+
+          # --- run: detect + AI-fix + re-verify + keep tests green ---
+          # ANTHROPIC_API_KEY, BITBUCKET_TOKEN, BITBUCKET_USER are repository
+          # variables (Secured). BITBUCKET_WORKSPACE/BITBUCKET_REPO identify the repo.
+          - export PW_TEST_CMD="${PW_TEST_CMD:-}"
+          - export BITBUCKET_WORKSPACE="${BITBUCKET_WORKSPACE:-${BITBUCKET_REPO_FULL_NAME%%/*}}"
+          - export BITBUCKET_REPO="${BITBUCKET_REPO:-${BITBUCKET_REPO_FULL_NAME##*/}}"
+          - patchwright scan . --json > patchwright-report.json || true
+          - git config user.name  "patchwright-bot"
+          - git config user.email "security-bot@yourco.dev"
+
+          # one command: validate every fix, then bundle them into ONE PR with
+          # an evidence table (re-scan + test proof) in the body.
+          - patchwright pr . --test "$PW_TEST_CMD" --base "$BITBUCKET_BRANCH" | tee patchwright.txt
+
+          # CI gate: fail the build if an UNFIXED high+ finding remains.
+          - patchwright scan . --fail-on HIGH
+        artifacts:
+          - patchwright-report.json
+          - patchwright.txt
+
+pipelines:
+  pull-requests:
+    '**':
+      - step: *patchwright
+  branches:
+    main:
+      - step: *patchwright
